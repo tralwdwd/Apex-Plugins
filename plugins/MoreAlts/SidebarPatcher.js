@@ -1,4 +1,4 @@
-import { storage } from "@vendetta/plugin";
+import { storage, manifest } from "@vendetta/plugin";
 import { React, NavigationNative } from "@vendetta/metro/common";
 import { getAssetIDByName } from "@vendetta/ui/assets";
 import { after } from "@vendetta/patcher";
@@ -16,6 +16,7 @@ const bunny = window.bunny;
 const tabsNavigationRef = bunny?.metro?.findByPropsLazy("getRootNavigationRef");
 const settingConstants = bunny?.metro?.findByPropsLazy("SETTING_RENDERER_CONFIG");
 const SettingsOverviewScreen = bunny?.metro?.findByNameLazy("SettingsOverviewScreen", false);
+const createListModule = bunny.metro.findByPropsLazy("createList");
 
 function Section({ tabs }) {
     const navigation = NavigationNative.useNavigation();
@@ -129,7 +130,49 @@ function patchTabsUI(tabs, patches) {
 
     const firstRender = Symbol("AccountSwitcher-pinToSettings");
 
-    patches.push(
+    try {
+        if(!createListModule) return;
+
+        patches.push(
+            after("createList", createListModule, (args, ret) => {
+                if(!args[0][firstRender]) {
+                    args[0][firstRender] = true;
+
+                    const [config] = args;
+                    const sections = config.sections;
+
+                    const section = sections?.find((x) => {
+                        ["Bunny", "Kettu", "Revenge"].some(
+                            mod => x.label === mod && x.title === mod
+                        )
+                    });
+
+                    // If unable to find a section
+                    if(!section) {
+                        const isMainSettings = Boolean(
+                            sections?.find((x) => 
+                                x.settings[0] == "PREMIUM"
+                            )
+                        )
+                        
+                        if(isMainSettings) {
+                            // Add a new section to the top
+                            sections.unshift({
+                                label: manifest.name,
+                                title: manifest.name,
+                                settings: [tabs.key]
+                            });
+                        }
+                    }
+
+                    if (section?.settings) {
+                        section.settings = [...section.settings, tabs.key];
+                    }
+                }
+            })
+        )
+    } catch {
+        patches.push(
         after("default", SettingsOverviewScreen, (args, ret) => {
             if (!args[0][firstRender]) {
                 args[0][firstRender] = true;
@@ -140,10 +183,28 @@ function patchTabsUI(tabs, patches) {
                 ).props;
                 
                 const section = sections?.find((x) =>
-                    ["Bunny", "Revenge"].some(
+                    ["Bunny", "Kettu", "Revenge"].some(
                         mod => x.label === mod && x.title === mod,
                     )
                 );
+
+                // If unable to find a section
+                    if(!section) {
+                        const isMainSettings = Boolean(
+                            sections?.find((x) => 
+                                x.settings[0] == "PREMIUM"
+                            )
+                        )
+                        
+                        if(isMainSettings) {
+                            // Add a new section to the top
+                            sections.unshift({
+                                label: manifest.name,
+                                title: manifest.name,
+                                settings: [tabs.key]
+                            });
+                        }
+                    }
 
                 if (section?.settings) {
                     section.settings = [...section.settings, tabs.key];
@@ -151,6 +212,7 @@ function patchTabsUI(tabs, patches) {
             }
         })
     );
+    }
 }
 
 function patchSettingsPin(tabs) {
