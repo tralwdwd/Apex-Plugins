@@ -141,17 +141,15 @@ function patchTabsUI(tabs, patches) {
                     const [config] = args;
                     const sections = config.sections;
 
-                    const section = sections?.find((x) => {
-                        ["Bunny", "Kettu", "Revenge"].some(
-                            mod => x.label === mod && x.title === mod
-                        )
-                    });
+                    const section = sections?.find((x) =>
+                        ["Bunny", "Kettu", "Revenge"].includes(x?.label)
+                    );
 
                     // If unable to find a section
                     if(!section) {
                         const isMainSettings = Boolean(
                             sections?.find((x) => 
-                                x.settings[0] == "PREMIUM"
+                                x.settings.includes("ACCOUNT")
                             )
                         )
                         
@@ -182,17 +180,15 @@ function patchTabsUI(tabs, patches) {
                     i => i.props?.sections,
                 ).props;
                 
-                const section = sections?.find((x) =>
-                    ["Bunny", "Kettu", "Revenge"].some(
-                        mod => x.label === mod && x.title === mod,
-                    )
+                const section = sections?.find((x) => 
+                    ["Bunny", "Kettu", "Revenge"].includes(x?.label)
                 );
 
                 // If unable to find a section
                     if(!section) {
                         const isMainSettings = Boolean(
                             sections?.find((x) => 
-                                x.settings[0] == "PREMIUM"
+                                x.settings.includes("ACCOUNT")
                             )
                         )
                         
